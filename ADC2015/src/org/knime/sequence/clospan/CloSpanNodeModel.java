@@ -151,7 +151,7 @@ public class CloSpanNodeModel extends NodeModel {
 	     */
 	    loadFromDataTable(inData[0], sequenceDatabase, minSup);
 	    
-        AlgoCloSpan algorithm = new AlgoCloSpan(minSup, abstractionCreator, findClosedPatterns,executePruningMethods);
+        AlgoCloSpan algorithm = new AlgoCloSpan(minSup, abstractionCreator, findClosedPatterns, executePruningMethods);
 
         algorithm.runAlgorithm(sequenceDatabase, keepPatterns, verbose, ".//output.txt", outputSequenceIdentifiers);
 		
@@ -223,7 +223,6 @@ public class CloSpanNodeModel extends NodeModel {
             int sequenceID=1;
             //For each line
             RowIterator rowIter = inData.iterator();
-            int i = 0;
             while (rowIter.hasNext()) {
             	thisLine = ((StringCell) (rowIter.next().getCell(seqColPos))).getStringValue();
                 // If the line is not a comment line
