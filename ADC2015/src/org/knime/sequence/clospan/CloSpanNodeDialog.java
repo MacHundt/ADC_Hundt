@@ -1,8 +1,11 @@
 package org.knime.sequence.clospan;
 
+import org.knime.core.data.StringValue;
 import org.knime.core.node.defaultnodesettings.DefaultNodeSettingsPane;
+import org.knime.core.node.defaultnodesettings.DialogComponentColumnNameSelection;
 import org.knime.core.node.defaultnodesettings.DialogComponentNumber;
-import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
+import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
 
 /**
  * <code>NodeDialog</code> for the "CloSpan" Node.
@@ -13,7 +16,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
  * complex dialog please derive directly from 
  * {@link org.knime.core.node.NodeDialogPane}.
  * 
- * @author Michael
+ * @author Michael Hundt
  */
 public class CloSpanNodeDialog extends DefaultNodeSettingsPane {
 
@@ -24,14 +27,20 @@ public class CloSpanNodeDialog extends DefaultNodeSettingsPane {
      */
     protected CloSpanNodeDialog() {
         super();
-        
+        addDialogComponent(new DialogComponentColumnNameSelection(
+        		new SettingsModelString(CloSpanNodeModel.SEQ_COL, 
+        				CloSpanNodeModel.DEFAULT_SEQ_COL),
+						"Column containing the sequences: ", 
+						0, 
+						true, 
+						StringValue.class));
         addDialogComponent(new DialogComponentNumber(
-                new SettingsModelIntegerBounded(
-                    CloSpanNodeModel.CFGKEY_COUNT,
-                    CloSpanNodeModel.DEFAULT_COUNT,
-                    Integer.MIN_VALUE, Integer.MAX_VALUE),
-                    "Counter:", /*step*/ 1, /*componentwidth*/ 5));
-                    
+        		new SettingsModelDoubleBounded(CloSpanNodeModel.MIN_SUP, 
+        				CloSpanNodeModel.DEFAULT_MIN_SUPP, 
+        				CloSpanNodeModel.MIN_MIN_SUP, 
+        				CloSpanNodeModel.MAX_MIN_SUP), 
+        		"Choose minSup", 
+        		0.05));
     }
 }
 

@@ -2,12 +2,20 @@ package org.knime.sequence.clospan;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.BitSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataColumnSpec;
 import org.knime.core.data.DataColumnSpecCreator;
 import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
+import org.knime.core.data.RowIterator;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.data.def.DoubleCell;
@@ -16,7 +24,6 @@ import org.knime.core.data.def.StringCell;
 import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
-import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
@@ -24,6 +31,15 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.sequence.clospan.spmf.AlgoCloSpan;
+import org.knime.sequence.clospan.spmf.items.Item;
+import org.knime.sequence.clospan.spmf.items.ItemFactory;
+import org.knime.sequence.clospan.spmf.items.Sequence;
+import org.knime.sequence.clospan.spmf.items.SequenceDatabase;
+import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator;
+import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator_Qualitative;
 
 
 /**
@@ -33,26 +49,47 @@ import org.knime.core.node.NodeSettingsWO;
  * @author Michael Hundt
  */
 public class CloSpanNodeModel extends NodeModel {
-    
-    // the logger instance
+	
+	 // the logger instance
     private static final NodeLogger logger = NodeLogger
             .getLogger(CloSpanNodeModel.class);
-        
-    /** the settings key which is used to retrieve and 
-        store the settings (from the dialog or from a settings file)    
-       (package visibility to be usable from the dialog). */
-	static final String CFGKEY_COUNT = "Count";
+	
+	/**
+	 * The container for building the output table.
+	 */
+	static BufferedDataContainer container;
+	
+	/**
+	 * The settings models for the dialog components to handle user settings.
+	 */
+	static final String MIN_SUP = "min_sup_selection";
+	static final String SEQ_COL = "seq_column_selection";
+	
 
     /** initial default count value. */
-    static final int DEFAULT_COUNT = 100;
-
-    // example value: the models count variable filled from the dialog 
-    // and used in the models execution method. The default components of the
-    // dialog work with "SettingsModels".
-    private final SettingsModelIntegerBounded m_count =
-        new SettingsModelIntegerBounded(CloSpanNodeModel.CFGKEY_COUNT,
-                    CloSpanNodeModel.DEFAULT_COUNT,
-                    Integer.MIN_VALUE, Integer.MAX_VALUE);
+    static final double DEFAULT_MIN_SUPP = 0.5 ;
+    static final String DEFAULT_SEQ_COL = "POLYLINE";
+    static final int MAX_MIN_SUP = 1;
+    static final int MIN_MIN_SUP = 0;
+	
+	private double minSup = 0.5;
+	private int seqColPos = 0;
+	
+	private SettingsModelDoubleBounded m_minSupSelection = createMinSupModel();
+	private SettingsModelString m_SeqColumnSelection = createSeqColumnModel();
+	
+	 boolean keepPatterns = true;
+     boolean verbose = false;
+     boolean findClosedPatterns = true;
+     boolean executePruningMethods = true;
+     
+     // if you set the following parameter to true, the sequence ids of the sequences where
+     // each pattern appears will be shown in the result
+     boolean outputSequenceIdentifiers = false;
+     
+     private Map<Item, BitSet> frequentItems = new HashMap<Item, BitSet>();
+     private List<Sequence> sequences = new LinkedList<Sequence>();
+     private ItemFactory<Integer> itemFactory = new ItemFactory<Integer>();
     
 
     /**
@@ -65,14 +102,59 @@ public class CloSpanNodeModel extends NodeModel {
     }
 
     /**
+	 * Creation of the different Settings Models to communicate with the node
+	 * dialog
+	 */
+	protected static SettingsModelString createSeqColumnModel() {
+		return new SettingsModelString(CloSpanNodeModel.SEQ_COL, 
+				CloSpanNodeModel.DEFAULT_SEQ_COL);
+	}
+
+	protected static SettingsModelDoubleBounded createMinSupModel() {
+		return new SettingsModelDoubleBounded(CloSpanNodeModel.MIN_SUP, 
+				CloSpanNodeModel.DEFAULT_MIN_SUPP, 
+				CloSpanNodeModel.MIN_MIN_SUP, 
+				CloSpanNodeModel.MAX_MIN_SUP);
+	}
+
+	/**
      * {@inheritDoc}
      */
     @Override
     protected BufferedDataTable[] execute(final BufferedDataTable[] inData,
             final ExecutionContext exec) throws Exception {
 
-        // TODO do something here
-        logger.info("Node Model Stub... this is not yet implemented !");
+    	if (inData == null || inData[0] == null) {
+			return inData;
+		}
+
+		// stores meta data about the table
+		DataTableSpec inDataSpec = inData[0].getDataTableSpec();
+		int rowNum = inData[0].getRowCount();
+		
+		/*
+		 * store the positions of needed columns.
+		 */
+		seqColPos = inDataSpec.findColumnIndex(m_SeqColumnSelection.getStringValue());
+		
+		minSup = m_minSupSelection.getDoubleValue();
+		
+		System.out.println("MinSupp: "+minSup);
+		System.out.println("SEQ_Col: "+seqColPos);
+		
+		AbstractionCreator abstractionCreator = AbstractionCreator_Qualitative.getInstance();
+
+	    SequenceDatabase sequenceDatabase = new SequenceDatabase();
+	    
+	    /*
+	     * Read in to sequential database 
+	     */
+	    loadFromDataTable(inData[0], sequenceDatabase, minSup);
+	    
+        AlgoCloSpan algorithm = new AlgoCloSpan(minSup, abstractionCreator, findClosedPatterns,executePruningMethods);
+
+        algorithm.runAlgorithm(sequenceDatabase, keepPatterns, verbose, ".//output.txt", outputSequenceIdentifiers);
+		
 
         
         // the data table spec of the single output table, 
@@ -91,11 +173,22 @@ public class CloSpanNodeModel extends NodeModel {
         // will buffer to disc if necessary.
         BufferedDataContainer container = exec.createDataContainer(outputSpec);
         // let's add m_count rows to it
-        for (int i = 0; i < m_count.getIntValue(); i++) {
-            RowKey key = new RowKey("Row " + i);
+        
+        RowIterator rowIter = inData[0].iterator();
+        int i = 0;
+        while (rowIter.hasNext()) {
+            RowKey key = new RowKey("Row" + i);
             // the cells of the current row, the types of the cells must match
             // the column spec (see above)
             DataCell[] cells = new DataCell[3];
+            
+            String[] inputTokens = ((StringCell) (rowIter.next()
+					.getCell(seqColPos))).getStringValue().split(" ");
+            
+            System.out.println(((StringCell) (rowIter.next()
+					.getCell(seqColPos))).getStringValue());
+            
+            
             cells[0] = new StringCell("String_" + i); 
             cells[1] = new DoubleCell(0.5 * i); 
             cells[2] = new IntCell(i);
@@ -104,13 +197,58 @@ public class CloSpanNodeModel extends NodeModel {
             
             // check if the execution monitor was canceled
             exec.checkCanceled();
-            exec.setProgress(i / (double)m_count.getIntValue(), 
+            exec.setProgress(i / (double)rowNum, 
                 "Adding row " + i);
+            i++;
         }
         // once we are done, we close the container and return its table
         container.close();
         BufferedDataTable out = container.getTable();
         return new BufferedDataTable[]{out};
+    }
+    
+    
+    /**
+     * From a  KNIME DataTable, we create a database
+     * composed of a list of sequences
+     *
+     * @param inData File a KNIME DataTable
+     * @param sequenceDatabase 
+     * @param minSupRelative relative Minimum support
+     * @throws IOException
+     */
+    public void loadFromDataTable(BufferedDataTable inData, SequenceDatabase sequenceDatabase, double minSupRelative) throws IOException {
+        String thisLine;
+        try {
+            int sequenceID=1;
+            //For each line
+            RowIterator rowIter = inData.iterator();
+            int i = 0;
+            while (rowIter.hasNext()) {
+            	thisLine = ((StringCell) (rowIter.next().getCell(seqColPos))).getStringValue();
+                // If the line is not a comment line
+                if (thisLine.charAt(0) != '#') {
+                    // we read it and add it as a sequence
+                	sequenceDatabase.addSequence(thisLine.split(" "),sequenceID);
+                    sequenceID++;
+                }
+            }
+            double minSupAbsolute = (int) Math.ceil(minSupRelative * sequences.size());
+            //We get the set of items
+            Set<Item> frequent = frequentItems.keySet();
+            //And prepare a list to keep the non-frequent ones
+            Set<Item> toRemove = new HashSet<Item>();
+            for (Item frecuente : frequent) {
+                if ((frequentItems.get(frecuente)).cardinality() < minSupAbsolute) {
+                    toRemove.add(frecuente);
+                }
+            }
+            //We remove from the original set those non frequent items
+            for(Item removedItem:toRemove){
+                frequentItems.remove(removedItem);
+            }
+        } catch (Exception e) {
+        }
     }
 
     /**
@@ -118,9 +256,7 @@ public class CloSpanNodeModel extends NodeModel {
      */
     @Override
     protected void reset() {
-        // TODO Code executed on reset.
-        // Models build during execute are cleared here.
-        // Also data handled in load/saveInternals will be erased here.
+        // TODO: generated method stub
     }
 
     /**
@@ -129,13 +265,8 @@ public class CloSpanNodeModel extends NodeModel {
     @Override
     protected DataTableSpec[] configure(final DataTableSpec[] inSpecs)
             throws InvalidSettingsException {
-        
-        // TODO: check if user settings are available, fit to the incoming
-        // table structure, and the incoming types are feasible for the node
-        // to execute. If the node can execute in its current state return
-        // the spec of its output data table(s) (if you can, otherwise an array
-        // with null elements), or throw an exception with a useful user message
 
+        // TODO: generated method stub
         return new DataTableSpec[]{null};
     }
 
@@ -144,11 +275,8 @@ public class CloSpanNodeModel extends NodeModel {
      */
     @Override
     protected void saveSettingsTo(final NodeSettingsWO settings) {
-
-        // TODO save user settings to the config object.
-        
-        m_count.saveSettingsTo(settings);
-
+    	m_minSupSelection.saveSettingsTo(settings);
+		m_SeqColumnSelection.saveSettingsTo(settings);
     }
 
     /**
@@ -157,13 +285,8 @@ public class CloSpanNodeModel extends NodeModel {
     @Override
     protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
             throws InvalidSettingsException {
-            
-        // TODO load (valid) settings from the config object.
-        // It can be safely assumed that the settings are valided by the 
-        // method below.
-        
-        m_count.loadSettingsFrom(settings);
-
+    	m_minSupSelection.loadSettingsFrom(settings);
+		m_SeqColumnSelection.loadSettingsFrom(settings);
     }
 
     /**
@@ -172,14 +295,8 @@ public class CloSpanNodeModel extends NodeModel {
     @Override
     protected void validateSettings(final NodeSettingsRO settings)
             throws InvalidSettingsException {
-            
-        // TODO check if the settings could be applied to our model
-        // e.g. if the count is in a certain range (which is ensured by the
-        // SettingsModel).
-        // Do not actually set any values of any member variables.
-
-        m_count.validateSettings(settings);
-
+    	m_minSupSelection.validateSettings(settings);
+		m_SeqColumnSelection.validateSettings(settings);
     }
     
     /**
@@ -189,14 +306,7 @@ public class CloSpanNodeModel extends NodeModel {
     protected void loadInternals(final File internDir,
             final ExecutionMonitor exec) throws IOException,
             CanceledExecutionException {
-        
-        // TODO load internal data. 
-        // Everything handed to output ports is loaded automatically (data
-        // returned by the execute method, models loaded in loadModelContent,
-        // and user settings set through loadSettingsFrom - is all taken care 
-        // of). Load here only the other internals that need to be restored
-        // (e.g. data used by the views).
-
+        // TODO: generated method stub
     }
     
     /**
@@ -206,14 +316,7 @@ public class CloSpanNodeModel extends NodeModel {
     protected void saveInternals(final File internDir,
             final ExecutionMonitor exec) throws IOException,
             CanceledExecutionException {
-       
-        // TODO save internal models. 
-        // Everything written to output ports is saved automatically (data
-        // returned by the execute method, models saved in the saveModelContent,
-        // and user settings saved through saveSettingsTo - is all taken care 
-        // of). Save here only the other internals that need to be preserved
-        // (e.g. data used by the views).
-
+        // TODO: generated method stub
     }
 
 }
