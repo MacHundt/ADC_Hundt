@@ -2,8 +2,10 @@ package org.knime.sequence.clospan;
 
 import org.knime.core.data.StringValue;
 import org.knime.core.node.defaultnodesettings.DefaultNodeSettingsPane;
+import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentColumnNameSelection;
 import org.knime.core.node.defaultnodesettings.DialogComponentNumber;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 
@@ -41,6 +43,9 @@ public class CloSpanNodeDialog extends DefaultNodeSettingsPane {
         				CloSpanNodeModel.MAX_MIN_SUP), 
         		"Choose minSup", 
         		0.05));
+        addDialogComponent(new DialogComponentBoolean(
+        		new SettingsModelBoolean(CloSpanNodeModel.OUTPUT_SEQ_ID, 
+        				CloSpanNodeModel.DEFAAULT_OUTPUT_SEQ_ID), "add sequence identifiers to output"));
     }
 }
 

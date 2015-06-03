@@ -142,6 +142,30 @@ public class AlgoCloSpan {
         //Search for frequent patterns: Finished
         saver.finish();
     }
+    
+    
+    public void runAlgorithm_Adapter(SequenceDatabase database, boolean keepPatterns, boolean verbose, Saver saver, boolean outputSequenceIdentifiers) throws IOException {
+        //calculation of the minimum relative support
+        minSupAbsolute = (int) Math.ceil(minSupRelative * database.size());
+        if (this.minSupAbsolute == 0) { // protection
+            this.minSupAbsolute = 1;
+        }
+        
+        this.saver = saver;
+        
+        // reset the stats about memory usage
+        MemoryLogger.getInstance().reset();
+        //keeping the starting time
+        overallStart = System.currentTimeMillis();
+        //Starting CloSpan algorithm
+        cloSpan(database, keepPatterns, verbose, findClosedPatterns, executePruningMethods, "SELF", outputSequenceIdentifiers);
+        //keeping the ending time
+        overallEnd = System.currentTimeMillis();
+        //Search for frequent patterns: Finished
+        saver.finish();
+    }
+    
+    
 
     /**
      * Method that executes the first steps before calling the actual main 
@@ -165,7 +189,11 @@ public class AlgoCloSpan {
         if (outputFilePath == null) {
             //The user wants to save the results in memory
             saver = new SaverIntoMemory(outputSequenceIdentifiers);
-        } else {
+        } else if (outputFilePath.equals("SELF") && saver != null) {
+        	System.out.println("Use: "+ saver.toString());
+        	// Do nothing, because we have set our own Saver already!!
+        }
+        else {
             //Otherwise, the user wants to save them in the given file
             saver = new SaverIntoFile(outputFilePath,outputSequenceIdentifiers);
         }
@@ -218,7 +246,7 @@ public class AlgoCloSpan {
         }else{
             if(keepPatterns){
                 List<Pattern> outputPatternsFromMainMethod = algorithm.getFrequentPatterns();
-                for(Pattern p:outputPatternsFromMainMethod){
+                for(Pattern p : outputPatternsFromMainMethod){
                     saver.savePattern(p);
                 }
             }

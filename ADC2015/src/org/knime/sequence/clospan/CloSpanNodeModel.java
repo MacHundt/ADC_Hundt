@@ -10,16 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.knime.core.data.DataCell;
-import org.knime.core.data.DataColumnSpec;
-import org.knime.core.data.DataColumnSpecCreator;
-import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.RowIterator;
-import org.knime.core.data.RowKey;
-import org.knime.core.data.def.DefaultRow;
-import org.knime.core.data.def.DoubleCell;
-import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
@@ -31,6 +23,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.sequence.clospan.spmf.AlgoCloSpan;
@@ -40,6 +33,7 @@ import org.knime.sequence.clospan.spmf.items.Sequence;
 import org.knime.sequence.clospan.spmf.items.SequenceDatabase;
 import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator;
 import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator_Qualitative;
+import org.knime.sequence.clospan.spmf.savers.SaverIntoKNIME;
 
 
 /**
@@ -64,19 +58,22 @@ public class CloSpanNodeModel extends NodeModel {
 	 */
 	static final String MIN_SUP = "min_sup_selection";
 	static final String SEQ_COL = "seq_column_selection";
+	static final String OUTPUT_SEQ_ID = "output_Sequence_Identifiers";
 	
 
     /** initial default count value. */
     static final double DEFAULT_MIN_SUPP = 0.5 ;
-    static final String DEFAULT_SEQ_COL = "POLYLINE";
     static final int MAX_MIN_SUP = 1;
     static final int MIN_MIN_SUP = 0;
+    static final String DEFAULT_SEQ_COL = "POLYLINE";
+    static final boolean DEFAAULT_OUTPUT_SEQ_ID = false;
 	
 	private double minSup = 0.5;
 	private int seqColPos = 0;
 	
 	private SettingsModelDoubleBounded m_minSupSelection = createMinSupModel();
 	private SettingsModelString m_SeqColumnSelection = createSeqColumnModel();
+	private SettingsModelBoolean m_output_seq_id = createOutSeqID();
 	
 	 boolean keepPatterns = true;
      boolean verbose = false;
@@ -101,7 +98,11 @@ public class CloSpanNodeModel extends NodeModel {
         super(1, 1);
     }
 
-    /**
+    private SettingsModelBoolean createOutSeqID() {
+		return new SettingsModelBoolean(OUTPUT_SEQ_ID, DEFAAULT_OUTPUT_SEQ_ID);
+	}
+
+	/**
 	 * Creation of the different Settings Models to communicate with the node
 	 * dialog
 	 */
@@ -133,14 +134,11 @@ public class CloSpanNodeModel extends NodeModel {
 		int rowNum = inData[0].getRowCount();
 		
 		/*
-		 * store the positions of needed columns.
+		 * read values form Dialog
 		 */
 		seqColPos = inDataSpec.findColumnIndex(m_SeqColumnSelection.getStringValue());
-		
 		minSup = m_minSupSelection.getDoubleValue();
-		
-		System.out.println("MinSupp: "+minSup);
-		System.out.println("SEQ_Col: "+seqColPos);
+		outputSequenceIdentifiers = m_output_seq_id.getBooleanValue();
 		
 		AbstractionCreator abstractionCreator = AbstractionCreator_Qualitative.getInstance();
 
@@ -152,57 +150,18 @@ public class CloSpanNodeModel extends NodeModel {
 	    loadFromDataTable(inData[0], sequenceDatabase, minSup);
 	    
         AlgoCloSpan algorithm = new AlgoCloSpan(minSup, abstractionCreator, findClosedPatterns, executePruningMethods);
+        
+        // SAVE the result in a KNIME DataTable
+        SaverIntoKNIME saver = new SaverIntoKNIME(exec, outputSequenceIdentifiers, rowNum);
 
-        algorithm.runAlgorithm(sequenceDatabase, keepPatterns, verbose, ".//output.txt", outputSequenceIdentifiers);
+        algorithm.runAlgorithm_Adapter(sequenceDatabase, keepPatterns, verbose, saver, outputSequenceIdentifiers);
 		
-
+        algorithm.printStatistics();
         
-        // the data table spec of the single output table, 
-        // the table will have three columns:
-        DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
-        allColSpecs[0] = 
-            new DataColumnSpecCreator("Column 0", StringCell.TYPE).createSpec();
-        allColSpecs[1] = 
-            new DataColumnSpecCreator("Column 1", DoubleCell.TYPE).createSpec();
-        allColSpecs[2] = 
-            new DataColumnSpecCreator("Column 2", IntCell.TYPE).createSpec();
-        DataTableSpec outputSpec = new DataTableSpec(allColSpecs);
-        // the execution context will provide us with storage capacity, in this
-        // case a data container to which we will add rows sequentially
-        // Note, this container can also handle arbitrary big data tables, it
-        // will buffer to disc if necessary.
-        BufferedDataContainer container = exec.createDataContainer(outputSpec);
-        // let's add m_count rows to it
-        
-        RowIterator rowIter = inData[0].iterator();
-        int i = 0;
-        while (rowIter.hasNext()) {
-            RowKey key = new RowKey("Row" + i);
-            // the cells of the current row, the types of the cells must match
-            // the column spec (see above)
-            DataCell[] cells = new DataCell[3];
-            
-            String[] inputTokens = ((StringCell) (rowIter.next()
-					.getCell(seqColPos))).getStringValue().split(" ");
-            
-            System.out.println(((StringCell) (rowIter.next()
-					.getCell(seqColPos))).getStringValue());
-            
-            
-            cells[0] = new StringCell("String_" + i); 
-            cells[1] = new DoubleCell(0.5 * i); 
-            cells[2] = new IntCell(i);
-            DataRow row = new DefaultRow(key, cells);
-            container.addRowToTable(row);
-            
-            // check if the execution monitor was canceled
-            exec.checkCanceled();
-            exec.setProgress(i / (double)rowNum, 
-                "Adding row " + i);
-            i++;
-        }
         // once we are done, we close the container and return its table
+        container = saver.getContainer();
         container.close();
+        
         BufferedDataTable out = container.getTable();
         return new BufferedDataTable[]{out};
     }
@@ -276,6 +235,7 @@ public class CloSpanNodeModel extends NodeModel {
     protected void saveSettingsTo(final NodeSettingsWO settings) {
     	m_minSupSelection.saveSettingsTo(settings);
 		m_SeqColumnSelection.saveSettingsTo(settings);
+		m_output_seq_id.saveSettingsTo(settings);
     }
 
     /**
@@ -286,6 +246,7 @@ public class CloSpanNodeModel extends NodeModel {
             throws InvalidSettingsException {
     	m_minSupSelection.loadSettingsFrom(settings);
 		m_SeqColumnSelection.loadSettingsFrom(settings);
+		m_output_seq_id.loadSettingsFrom(settings);
     }
 
     /**
@@ -296,6 +257,7 @@ public class CloSpanNodeModel extends NodeModel {
             throws InvalidSettingsException {
     	m_minSupSelection.validateSettings(settings);
 		m_SeqColumnSelection.validateSettings(settings);
+		m_output_seq_id.validateSettings(settings);
     }
     
     /**
