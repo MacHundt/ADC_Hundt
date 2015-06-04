@@ -3,8 +3,15 @@ package org.knime.sequence.prefixspan;
 import java.io.File;
 import java.io.IOException;
 
+import org.knime.core.data.DataCell;
+import org.knime.core.data.DataColumnSpec;
+import org.knime.core.data.DataColumnSpecCreator;
+import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.RowIterator;
+import org.knime.core.data.RowKey;
+import org.knime.core.data.def.DefaultRow;
+import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
@@ -20,6 +27,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.sequence.prefixspan.spmf.AlgoPrefixSpan;
+import org.knime.sequence.prefixspan.spmf.SequentialPattern;
 import org.knime.sequence.prefixspan.spmf.SequentialPatterns;
 import org.knime.sequence.prefixspan.spmf.input.SequenceDatabase;
 
@@ -59,7 +67,7 @@ public class PrefixSpanNodeModel extends NodeModel {
 	private int seqColPos = 0;
 	private int rowNum = 0;
 
-	private SettingsModelDoubleBounded m_minSupSelection = createMinSupModel();
+	private SettingsModelDoubleBounded m_minSup = createMinSupModel();
 	private SettingsModelString m_SeqColumnSelection = createSeqColumnModel();
 	private SettingsModelBoolean m_output_seq_id = createOutSeqID();
 
@@ -122,9 +130,9 @@ public class PrefixSpanNodeModel extends NodeModel {
 		seqColPos = inDataSpec.findColumnIndex(m_SeqColumnSelection
 				.getStringValue());
 		//relative in %
-		minSup = m_minSupSelection.getDoubleValue();
+		minSup = m_minSup.getDoubleValue();
 		// absolut minsup
-		int absminSup =  (int) java.lang.Math.ceil((minSup * rowNum));
+//		int absminSup =  (int) java.lang.Math.ceil((minSup * rowNum));
 		outputSequenceIdentifiers = m_output_seq_id.getBooleanValue();
 
 		SequenceDatabase sequenceDatabase = new SequenceDatabase();
@@ -134,20 +142,73 @@ public class PrefixSpanNodeModel extends NodeModel {
 		 */
 		loadFromDataTable(inData[0], sequenceDatabase);
 
-		// Create an instance of the algorithm with minsup = 50 %
+		
 		AlgoPrefixSpan algo = new AlgoPrefixSpan(); 
 		
         // if you set the following parameter to true, the sequence ids of the sequences where
         // each pattern appears will be shown in the result
         algo.setShowSequenceIdentifiers(outputSequenceIdentifiers);
 		
-
 		// execute the algorithm
         SequentialPatterns patterns = algo.runAlgorithm(sequenceDatabase, minSup, null); 
 		algo.printStatistics(sequenceDatabase.size());
 		
 		patterns.printFrequentPatterns(100, outputSequenceIdentifiers);
 		
+		
+		DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
+		if (outputSequenceIdentifiers) {
+			allColSpecs = new DataColumnSpec[4];
+		}
+		// the sequence
+		allColSpecs[0] = new DataColumnSpecCreator("Sequence", StringCell.TYPE)
+				.createSpec();
+		// the support
+		allColSpecs[1] = new DataColumnSpecCreator("Support", IntCell.TYPE)
+				.createSpec();
+		allColSpecs[2] = new DataColumnSpecCreator("itemNumber", IntCell.TYPE)
+				.createSpec();
+		if (outputSequenceIdentifiers) {
+			allColSpecs[3] = new DataColumnSpecCreator("Sequence Identifiers",
+					StringCell.TYPE).createSpec();
+		}
+		DataTableSpec outputSpec = new DataTableSpec(allColSpecs);
+		container = exec.createDataContainer(outputSpec);
+		
+		int id = 1;
+		for (int i = 0; i < patterns.getLevelCount(); i++) {
+			for ( SequentialPattern p : patterns.getLevel(i)) {
+				
+				RowKey key = new RowKey("Row" + id++);
+				DataCell[] cells = new DataCell[3];
+				if (outputSequenceIdentifiers) {
+					cells = new DataCell[4];
+				}
+				String sequence = p.toString();
+				int support = p.getAbsoluteSupport();
+				String sid = "";
+				if (outputSequenceIdentifiers) {
+					sid += p.getSequenceIDs();
+				} 
+				
+				cells[0] = new StringCell(sequence);
+				cells[1] = new IntCell(support);
+				cells[2] = new IntCell((sequence.split(" -1").length) - 1);
+				if (outputSequenceIdentifiers) {
+					cells[3] = new StringCell(sid);
+				}
+				DataRow row = new DefaultRow(key, cells);
+				container.addRowToTable(row);
+				
+				// check if the execution monitor was canceled
+				try {
+					exec.checkCanceled();
+				} catch (CanceledExecutionException e) {
+					e.printStackTrace();
+				}
+				exec.setProgress(i / (double) rowNum, "Adding row " + i);
+			}
+		}
 		
 		// once we are done, we close the container and return its table
 		container.close();
@@ -208,7 +269,7 @@ public class PrefixSpanNodeModel extends NodeModel {
 	 */
 	@Override
 	protected void saveSettingsTo(final NodeSettingsWO settings) {
-		m_minSupSelection.saveSettingsTo(settings);
+		m_minSup.saveSettingsTo(settings);
 		m_SeqColumnSelection.saveSettingsTo(settings);
 		m_output_seq_id.saveSettingsTo(settings);
 	}
@@ -219,7 +280,7 @@ public class PrefixSpanNodeModel extends NodeModel {
 	@Override
 	protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
 			throws InvalidSettingsException {
-		m_minSupSelection.loadSettingsFrom(settings);
+		m_minSup.loadSettingsFrom(settings);
 		m_SeqColumnSelection.loadSettingsFrom(settings);
 		m_output_seq_id.loadSettingsFrom(settings);
 	}
@@ -230,7 +291,7 @@ public class PrefixSpanNodeModel extends NodeModel {
 	@Override
 	protected void validateSettings(final NodeSettingsRO settings)
 			throws InvalidSettingsException {
-		m_minSupSelection.validateSettings(settings);
+		m_minSup.validateSettings(settings);
 		m_SeqColumnSelection.validateSettings(settings);
 		m_output_seq_id.validateSettings(settings);
 	}

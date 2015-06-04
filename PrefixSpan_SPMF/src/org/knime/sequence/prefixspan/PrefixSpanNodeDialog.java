@@ -26,7 +26,8 @@ public class PrefixSpanNodeDialog extends DefaultNodeSettingsPane {
      * This is just a suggestion to demonstrate possible default dialog
      * components.
      */
-    protected PrefixSpanNodeDialog() {
+    @SuppressWarnings("unchecked")
+	protected PrefixSpanNodeDialog() {
         super();
         addDialogComponent(new DialogComponentColumnNameSelection(
         		new SettingsModelString(PrefixSpanNodeModel.SEQ_COL, 

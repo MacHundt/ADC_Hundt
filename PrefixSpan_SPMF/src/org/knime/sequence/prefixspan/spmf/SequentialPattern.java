@@ -125,14 +125,13 @@ public class SequentialPattern implements Comparable<SequentialPattern>{
 		StringBuilder r = new StringBuilder("");
 		// For each itemset in this sequential pattern
 		for(Itemset itemset : itemsets){
-			r.append('('); // begining of an itemset
 			// For each item in the current itemset
 			for(Integer item : itemset.getItems()){
 				String string = item.toString();
 				r.append(string); // append the item
-				r.append(' ');
+				r.append(" -1");
 			}
-			r.append(')');// end of an itemset
+			r.append(" -2");// end of an itemset
 		}
 //
 //		//  add the list of sequence IDs that contains this pattern.

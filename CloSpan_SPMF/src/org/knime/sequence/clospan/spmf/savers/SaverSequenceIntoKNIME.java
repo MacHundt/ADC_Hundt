@@ -16,10 +16,11 @@ import org.knime.sequence.clospan.spmf.items.patterns.Pattern;
 
 /**
  * This is an implementation of a class implementing the Saver interface. By
- * means of these lines, the user choose to keep his patterns in a KNIME DataTale.
+ * means of these lines, the user choose to keep his patterns in a KNIME
+ * DataTale.
  * 
  * 
-**/
+ **/
 public class SaverSequenceIntoKNIME implements Saver {
 
 	private BufferedDataContainer container;
@@ -27,31 +28,31 @@ public class SaverSequenceIntoKNIME implements Saver {
 	private boolean outputSequenceIdentifiers;
 	private static int rowID = 0;
 	private int rowNum;
-	
-	public SaverSequenceIntoKNIME( ExecutionContext exec, 
+
+	public SaverSequenceIntoKNIME(ExecutionContext exec,
 			boolean outputSequenceIdentifiers, int rowNum) {
 		this.exec = exec;
 		this.outputSequenceIdentifiers = outputSequenceIdentifiers;
 		this.rowNum = rowNum;
-        // the data table spec of the single output table, 
-        // the table will have three columns:
-        DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
-        	if (outputSequenceIdentifiers) {
-        		allColSpecs = new DataColumnSpec[4];
-        	}
-        	// the sequence
-        allColSpecs[0] = 
-            new DataColumnSpecCreator("Sequence", StringCell.TYPE).createSpec();
-        // the support
-        allColSpecs[1] = 
-            new DataColumnSpecCreator("Support", IntCell.TYPE).createSpec();
-        allColSpecs[2] = 
-            new DataColumnSpecCreator("itemNumber", IntCell.TYPE).createSpec();
-        if (outputSequenceIdentifiers) {
-        	 allColSpecs[3] = 
-        			 new DataColumnSpecCreator("Sequence Identifiers", StringCell.TYPE).createSpec();
-        }
-        DataTableSpec outputSpec = new DataTableSpec(allColSpecs);
+		// the data table spec of the single output table,
+		// the table will have three columns:
+		DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
+		if (outputSequenceIdentifiers) {
+			allColSpecs = new DataColumnSpec[4];
+		}
+		// the sequence
+		allColSpecs[0] = new DataColumnSpecCreator("Sequence", StringCell.TYPE)
+				.createSpec();
+		// the support
+		allColSpecs[1] = new DataColumnSpecCreator("Support", IntCell.TYPE)
+				.createSpec();
+		allColSpecs[2] = new DataColumnSpecCreator("itemNumber", IntCell.TYPE)
+				.createSpec();
+		if (outputSequenceIdentifiers) {
+			allColSpecs[3] = new DataColumnSpecCreator("Sequence Identifiers",
+					StringCell.TYPE).createSpec();
+		}
+		DataTableSpec outputSpec = new DataTableSpec(allColSpecs);
 		this.container = exec.createDataContainer(outputSpec);
 	}
 
@@ -61,11 +62,11 @@ public class SaverSequenceIntoKNIME implements Saver {
 
 	@Override
 	public void savePattern(Pattern p) {
-         
-        StringBuilder r = new StringBuilder("");
-        r.append(p.toStringToFile(outputSequenceIdentifiers));
-        
-        RowKey key = new RowKey("Row" + rowID++);
+
+		StringBuilder r = new StringBuilder("");
+		r.append(p.toStringToFile(outputSequenceIdentifiers));
+
+		RowKey key = new RowKey("Row" + rowID++);
 		DataCell[] cells = new DataCell[3];
 		if (outputSequenceIdentifiers) {
 			cells = new DataCell[4];
@@ -77,30 +78,27 @@ public class SaverSequenceIntoKNIME implements Saver {
 		if (outputSequenceIdentifiers) {
 			support = Integer.parseInt(tokens[1].split("#SID: ")[0].trim());
 			sid += tokens[1].split("#SID: ")[1].trim();
-		}
-		else {
+		} else {
 			support = Integer.parseInt(tokens[1].trim());
 		}
-		
-		
+
 		cells[0] = new StringCell(sequence);
 		cells[1] = new IntCell(support);
-		cells[2] = new IntCell((sequence.split(" -1").length)-1);
+		cells[2] = new IntCell((sequence.split(" -1").length) - 1);
 		if (outputSequenceIdentifiers) {
 			cells[3] = new StringCell(sid);
 		}
 		DataRow row = new DefaultRow(key, cells);
 		container.addRowToTable(row);
-		
-       // check if the execution monitor was canceled
-       try {
-		exec.checkCanceled();
-	} catch (CanceledExecutionException e) {
-		e.printStackTrace();
-	}
-       exec.setProgress(rowID / (double)rowNum, 
-           "Adding row " + rowID);
-       
+
+		// check if the execution monitor was canceled
+		try {
+			exec.checkCanceled();
+		} catch (CanceledExecutionException e) {
+			e.printStackTrace();
+		}
+		exec.setProgress(rowID / (double) rowNum, "Adding row " + rowID);
+
 	}
 
 	@Override
@@ -116,7 +114,7 @@ public class SaverSequenceIntoKNIME implements Saver {
 
 	@Override
 	public String print() {
-		 return "Content at KNIME DataTable Container";
+		return "Content at KNIME DataTable Container";
 	}
 
 }
