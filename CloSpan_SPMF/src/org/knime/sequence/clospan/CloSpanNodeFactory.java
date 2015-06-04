@@ -8,7 +8,7 @@ import org.knime.core.node.NodeView;
  * <code>NodeFactory</code> for the "CloSpan" Node.
  * 
  *
- * @author Michael
+ * @author Michael Hundt
  */
 public class CloSpanNodeFactory 
         extends NodeFactory<CloSpanNodeModel> {

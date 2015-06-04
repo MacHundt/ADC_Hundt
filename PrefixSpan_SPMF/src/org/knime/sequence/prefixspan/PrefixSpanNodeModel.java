@@ -3,20 +3,12 @@ package org.knime.sequence.prefixspan;
 import java.io.File;
 import java.io.IOException;
 
-import org.knime.core.data.DataCell;
-import org.knime.core.data.DataColumnSpec;
-import org.knime.core.data.DataColumnSpecCreator;
-import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
-import org.knime.core.data.RowKey;
-import org.knime.core.data.def.DefaultRow;
-import org.knime.core.data.def.DoubleCell;
-import org.knime.core.data.def.IntCell;
+import org.knime.core.data.RowIterator;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
-import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
@@ -24,197 +16,243 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
+import org.knime.core.node.defaultnodesettings.SettingsModelDoubleBounded;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.sequence.prefixspan.spmf.AlgoPrefixSpan;
+import org.knime.sequence.prefixspan.spmf.SequentialPatterns;
+import org.knime.sequence.prefixspan.spmf.input.SequenceDatabase;
 
 
 /**
- * This is the model implementation of PrefixSpan.
+ * This is the model implementation of CloSpan.
  * 
- *
+ * 
  * @author Michael Hundt
  */
 public class PrefixSpanNodeModel extends NodeModel {
-    
-    // the logger instance
-    private static final NodeLogger logger = NodeLogger
-            .getLogger(PrefixSpanNodeModel.class);
-        
-    /** the settings key which is used to retrieve and 
-        store the settings (from the dialog or from a settings file)    
-       (package visibility to be usable from the dialog). */
-	static final String CFGKEY_COUNT = "Count";
 
-    /** initial default count value. */
-    static final int DEFAULT_COUNT = 100;
+	// the logger instance
+	private static final NodeLogger logger = NodeLogger
+			.getLogger(PrefixSpanNodeModel.class);
 
-    // example value: the models count variable filled from the dialog 
-    // and used in the models execution method. The default components of the
-    // dialog work with "SettingsModels".
-    private final SettingsModelIntegerBounded m_count =
-        new SettingsModelIntegerBounded(PrefixSpanNodeModel.CFGKEY_COUNT,
-                    PrefixSpanNodeModel.DEFAULT_COUNT,
-                    Integer.MIN_VALUE, Integer.MAX_VALUE);
-    
+	/**
+	 * The container for building the output table.
+	 */
+	static BufferedDataContainer container;
 
-    /**
-     * Constructor for the node model.
-     */
-    protected PrefixSpanNodeModel() {
-    
-        // TODO one incoming port and one outgoing port is assumed
-        super(1, 1);
-    }
+	/**
+	 * The settings models for the dialog components to handle user settings.
+	 */
+	static final String MIN_SUP = "min_sup_selection";
+	static final String SEQ_COL = "seq_column_selection";
+	static final String OUTPUT_SEQ_ID = "output_Sequence_Identifiers";
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected BufferedDataTable[] execute(final BufferedDataTable[] inData,
-            final ExecutionContext exec) throws Exception {
+	/** initial default count value. */
+	static final double DEFAULT_MIN_SUPP = 0.05;
+	static final int MAX_MIN_SUP = 1;
+	static final int MIN_MIN_SUP = 0;
+	static final String DEFAULT_SEQ_COL = "POLYLINE";
+	static final boolean DEFAAULT_OUTPUT_SEQ_ID = false;
 
-        // TODO do something here
-        logger.info("Node Model Stub... this is not yet implemented !");
+	private double minSup = 0.5;
+	private int seqColPos = 0;
+	private int rowNum = 0;
 
-        
-        // the data table spec of the single output table, 
-        // the table will have three columns:
-        DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
-        allColSpecs[0] = 
-            new DataColumnSpecCreator("Column 0", StringCell.TYPE).createSpec();
-        allColSpecs[1] = 
-            new DataColumnSpecCreator("Column 1", DoubleCell.TYPE).createSpec();
-        allColSpecs[2] = 
-            new DataColumnSpecCreator("Column 2", IntCell.TYPE).createSpec();
-        DataTableSpec outputSpec = new DataTableSpec(allColSpecs);
-        // the execution context will provide us with storage capacity, in this
-        // case a data container to which we will add rows sequentially
-        // Note, this container can also handle arbitrary big data tables, it
-        // will buffer to disc if necessary.
-        BufferedDataContainer container = exec.createDataContainer(outputSpec);
-        // let's add m_count rows to it
-        for (int i = 0; i < m_count.getIntValue(); i++) {
-            RowKey key = new RowKey("Row " + i);
-            // the cells of the current row, the types of the cells must match
-            // the column spec (see above)
-            DataCell[] cells = new DataCell[3];
-            cells[0] = new StringCell("String_" + i); 
-            cells[1] = new DoubleCell(0.5 * i); 
-            cells[2] = new IntCell(i);
-            DataRow row = new DefaultRow(key, cells);
-            container.addRowToTable(row);
-            
-            // check if the execution monitor was canceled
-            exec.checkCanceled();
-            exec.setProgress(i / (double)m_count.getIntValue(), 
-                "Adding row " + i);
-        }
-        // once we are done, we close the container and return its table
-        container.close();
-        BufferedDataTable out = container.getTable();
-        return new BufferedDataTable[]{out};
-    }
+	private SettingsModelDoubleBounded m_minSupSelection = createMinSupModel();
+	private SettingsModelString m_SeqColumnSelection = createSeqColumnModel();
+	private SettingsModelBoolean m_output_seq_id = createOutSeqID();
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void reset() {
-        // TODO Code executed on reset.
-        // Models build during execute are cleared here.
-        // Also data handled in load/saveInternals will be erased here.
-    }
+	boolean keepPatterns = true;
+	boolean verbose = false;
+	boolean findClosedPatterns = true;
+	boolean executePruningMethods = true;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected DataTableSpec[] configure(final DataTableSpec[] inSpecs)
-            throws InvalidSettingsException {
-        
-        // TODO: check if user settings are available, fit to the incoming
-        // table structure, and the incoming types are feasible for the node
-        // to execute. If the node can execute in its current state return
-        // the spec of its output data table(s) (if you can, otherwise an array
-        // with null elements), or throw an exception with a useful user message
+	// if you set the following parameter to true, the sequence ids of the
+	// sequences where
+	// each pattern appears will be shown in the result
+	boolean outputSequenceIdentifiers = false;
 
-        return new DataTableSpec[]{null};
-    }
+	/**
+	 * Constructor for the node model.
+	 */
+	protected PrefixSpanNodeModel() {
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void saveSettingsTo(final NodeSettingsWO settings) {
+		// TODO one incoming port and one outgoing port is assumed
+		super(1, 1);
+	}
 
-        // TODO save user settings to the config object.
-        
-        m_count.saveSettingsTo(settings);
+	private SettingsModelBoolean createOutSeqID() {
+		return new SettingsModelBoolean(OUTPUT_SEQ_ID, DEFAAULT_OUTPUT_SEQ_ID);
+	}
 
-    }
+	/**
+	 * Creation of the different Settings Models to communicate with the node
+	 * dialog
+	 */
+	protected static SettingsModelString createSeqColumnModel() {
+		return new SettingsModelString(PrefixSpanNodeModel.SEQ_COL,
+				PrefixSpanNodeModel.DEFAULT_SEQ_COL);
+	}
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
-            throws InvalidSettingsException {
-            
-        // TODO load (valid) settings from the config object.
-        // It can be safely assumed that the settings are valided by the 
-        // method below.
-        
-        m_count.loadSettingsFrom(settings);
+	protected static SettingsModelDoubleBounded createMinSupModel() {
+		return new SettingsModelDoubleBounded(PrefixSpanNodeModel.MIN_SUP,
+				PrefixSpanNodeModel.DEFAULT_MIN_SUPP,
+				PrefixSpanNodeModel.MIN_MIN_SUP, PrefixSpanNodeModel.MAX_MIN_SUP);
+	}
 
-    }
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected BufferedDataTable[] execute(final BufferedDataTable[] inData,
+			final ExecutionContext exec) throws Exception {
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void validateSettings(final NodeSettingsRO settings)
-            throws InvalidSettingsException {
-            
-        // TODO check if the settings could be applied to our model
-        // e.g. if the count is in a certain range (which is ensured by the
-        // SettingsModel).
-        // Do not actually set any values of any member variables.
+		if (inData == null || inData[0] == null) {
+			return inData;
+		}
 
-        m_count.validateSettings(settings);
+		// stores meta data about the table
+		DataTableSpec inDataSpec = inData[0].getDataTableSpec();
+		rowNum = inData[0].getRowCount();
 
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void loadInternals(final File internDir,
-            final ExecutionMonitor exec) throws IOException,
-            CanceledExecutionException {
-        
-        // TODO load internal data. 
-        // Everything handed to output ports is loaded automatically (data
-        // returned by the execute method, models loaded in loadModelContent,
-        // and user settings set through loadSettingsFrom - is all taken care 
-        // of). Load here only the other internals that need to be restored
-        // (e.g. data used by the views).
+		/*
+		 * read values form Dialog
+		 */
+		seqColPos = inDataSpec.findColumnIndex(m_SeqColumnSelection
+				.getStringValue());
+		//relative in %
+		minSup = m_minSupSelection.getDoubleValue();
+		// absolut minsup
+		int absminSup =  (int) java.lang.Math.ceil((minSup * rowNum));
+		outputSequenceIdentifiers = m_output_seq_id.getBooleanValue();
 
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void saveInternals(final File internDir,
-            final ExecutionMonitor exec) throws IOException,
-            CanceledExecutionException {
-       
-        // TODO save internal models. 
-        // Everything written to output ports is saved automatically (data
-        // returned by the execute method, models saved in the saveModelContent,
-        // and user settings saved through saveSettingsTo - is all taken care 
-        // of). Save here only the other internals that need to be preserved
-        // (e.g. data used by the views).
+		SequenceDatabase sequenceDatabase = new SequenceDatabase();
 
-    }
+		/*
+		 * Read in to sequential database
+		 */
+		loadFromDataTable(inData[0], sequenceDatabase);
+
+		// Create an instance of the algorithm with minsup = 50 %
+		AlgoPrefixSpan algo = new AlgoPrefixSpan(); 
+		
+        // if you set the following parameter to true, the sequence ids of the sequences where
+        // each pattern appears will be shown in the result
+        algo.setShowSequenceIdentifiers(outputSequenceIdentifiers);
+		
+
+		// execute the algorithm
+        SequentialPatterns patterns = algo.runAlgorithm(sequenceDatabase, minSup, null); 
+		algo.printStatistics(sequenceDatabase.size());
+		
+		patterns.printFrequentPatterns(100, outputSequenceIdentifiers);
+		
+		
+		// once we are done, we close the container and return its table
+		container.close();
+
+		BufferedDataTable out = container.getTable();
+		return new BufferedDataTable[] { out };
+	}
+
+	/**
+	 * From a KNIME DataTable, we create a database composed of a list of
+	 * sequences
+	 * 
+	 * @param inData
+	 *            File a KNIME DataTable
+	 * @param sequenceDatabase
+	 * @param minSupRelative
+	 *            relative Minimum support
+	 * @throws IOException
+	 */
+	public void loadFromDataTable(BufferedDataTable inData,
+			SequenceDatabase sequenceDatabase) throws IOException {
+		String thisLine; // variable to read each line.
+		// For each line
+		RowIterator rowIter = inData.iterator();
+		while (rowIter.hasNext()) {
+			thisLine = ((StringCell) (rowIter.next().getCell(seqColPos)))
+					.getStringValue();
+			// If the line is not a comment line
+			if (thisLine.isEmpty() == false && thisLine.charAt(0) != '#'
+					&& thisLine.charAt(0) != '%' && thisLine.charAt(0) != '@') {
+				// we read it and add it as a sequence
+				sequenceDatabase.addSequence(thisLine.split(" "));
+			}
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void reset() {
+		// TODO: generated method stub
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected DataTableSpec[] configure(final DataTableSpec[] inSpecs)
+			throws InvalidSettingsException {
+
+		// TODO: generated method stub
+		return new DataTableSpec[] { null };
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void saveSettingsTo(final NodeSettingsWO settings) {
+		m_minSupSelection.saveSettingsTo(settings);
+		m_SeqColumnSelection.saveSettingsTo(settings);
+		m_output_seq_id.saveSettingsTo(settings);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
+			throws InvalidSettingsException {
+		m_minSupSelection.loadSettingsFrom(settings);
+		m_SeqColumnSelection.loadSettingsFrom(settings);
+		m_output_seq_id.loadSettingsFrom(settings);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void validateSettings(final NodeSettingsRO settings)
+			throws InvalidSettingsException {
+		m_minSupSelection.validateSettings(settings);
+		m_SeqColumnSelection.validateSettings(settings);
+		m_output_seq_id.validateSettings(settings);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void loadInternals(final File internDir,
+			final ExecutionMonitor exec) throws IOException,
+			CanceledExecutionException {
+		// TODO: generated method stub
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	protected void saveInternals(final File internDir,
+			final ExecutionMonitor exec) throws IOException,
+			CanceledExecutionException {
+		// TODO: generated method stub
+	}
 
 }
-
