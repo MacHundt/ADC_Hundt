@@ -33,7 +33,7 @@ import org.knime.sequence.clospan.spmf.items.Sequence;
 import org.knime.sequence.clospan.spmf.items.SequenceDatabase;
 import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator;
 import org.knime.sequence.clospan.spmf.items.creators.AbstractionCreator_Qualitative;
-import org.knime.sequence.clospan.spmf.savers.SaverIntoKNIME;
+import org.knime.sequence.clospan.spmf.savers.SaverSequenceIntoKNIME;
 
 /**
  * This is the model implementation of CloSpan.
@@ -153,7 +153,7 @@ public class CloSpanNodeModel extends NodeModel {
 				findClosedPatterns, executePruningMethods);
 
 		// SAVE the result in a KNIME DataTable
-		SaverIntoKNIME saver = new SaverIntoKNIME(exec,
+		SaverSequenceIntoKNIME saver = new SaverSequenceIntoKNIME(exec,
 				outputSequenceIdentifiers, rowNum);
 		algorithm.runAlgorithm_Adapter(sequenceDatabase, keepPatterns, verbose,
 				saver, outputSequenceIdentifiers);

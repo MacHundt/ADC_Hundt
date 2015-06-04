@@ -5,10 +5,8 @@ import org.knime.core.data.DataColumnSpec;
 import org.knime.core.data.DataColumnSpecCreator;
 import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
-import org.knime.core.data.RowIterator;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.def.DefaultRow;
-import org.knime.core.data.def.DoubleCell;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.BufferedDataContainer;
@@ -22,7 +20,7 @@ import org.knime.sequence.clospan.spmf.items.patterns.Pattern;
  * 
  * 
 **/
-public class SaverIntoKNIME implements Saver {
+public class SaverSequenceIntoKNIME implements Saver {
 
 	private BufferedDataContainer container;
 	private ExecutionContext exec;
@@ -30,7 +28,7 @@ public class SaverIntoKNIME implements Saver {
 	private static int rowID = 0;
 	private int rowNum;
 	
-	public SaverIntoKNIME( ExecutionContext exec, 
+	public SaverSequenceIntoKNIME( ExecutionContext exec, 
 			boolean outputSequenceIdentifiers, int rowNum) {
 		this.exec = exec;
 		this.outputSequenceIdentifiers = outputSequenceIdentifiers;
@@ -48,7 +46,7 @@ public class SaverIntoKNIME implements Saver {
         allColSpecs[1] = 
             new DataColumnSpecCreator("Support", IntCell.TYPE).createSpec();
         allColSpecs[2] = 
-            new DataColumnSpecCreator("Sequence Length", IntCell.TYPE).createSpec();
+            new DataColumnSpecCreator("itemNumber", IntCell.TYPE).createSpec();
         if (outputSequenceIdentifiers) {
         	 allColSpecs[3] = 
         			 new DataColumnSpecCreator("Sequence Identifiers", StringCell.TYPE).createSpec();
