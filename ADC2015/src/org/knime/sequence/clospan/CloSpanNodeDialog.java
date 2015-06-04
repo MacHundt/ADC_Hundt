@@ -36,13 +36,14 @@ public class CloSpanNodeDialog extends DefaultNodeSettingsPane {
 						0, 
 						true, 
 						StringValue.class));
+        
         addDialogComponent(new DialogComponentNumber(
         		new SettingsModelDoubleBounded(CloSpanNodeModel.MIN_SUP, 
         				CloSpanNodeModel.DEFAULT_MIN_SUPP, 
         				CloSpanNodeModel.MIN_MIN_SUP, 
         				CloSpanNodeModel.MAX_MIN_SUP), 
         		"Choose minSup", 
-        		0.05));
+        		0.002));
         addDialogComponent(new DialogComponentBoolean(
         		new SettingsModelBoolean(CloSpanNodeModel.OUTPUT_SEQ_ID, 
         				CloSpanNodeModel.DEFAAULT_OUTPUT_SEQ_ID), "add sequence identifiers to output"));

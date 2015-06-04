@@ -72,9 +72,6 @@ public class SaverIntoKNIME implements Saver {
 		if (outputSequenceIdentifiers) {
 			cells = new DataCell[4];
 		}
-		
-		System.out.println(r.toString());
-		
 		String[] tokens = r.toString().split("#SUP:");
 		String sequence = tokens[0] + "-2";
 		int support;

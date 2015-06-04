@@ -150,9 +150,7 @@ public class AlgoCloSpan {
         if (this.minSupAbsolute == 0) { // protection
             this.minSupAbsolute = 1;
         }
-        
         this.saver = saver;
-        
         // reset the stats about memory usage
         MemoryLogger.getInstance().reset();
         //keeping the starting time
@@ -225,7 +223,7 @@ public class AlgoCloSpan {
         numberOfFrequentPatterns = algorithm.numberOfFrequentPatterns();
         
         // check the memory usage for statistics
-	MemoryLogger.getInstance().checkMemory();
+        MemoryLogger.getInstance().checkMemory();
         
         if (verbose) {
             System.out.println("CLOSPAN: The algorithm takes " + timeForMainMethod + " seconds and finds " + numberOfFrequentPatterns + " patterns");
