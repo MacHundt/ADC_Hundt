@@ -222,9 +222,9 @@ public class AlgoPrefixSpan{
 				// for each item
 				for(Integer item : itemset.getItems()){
 					r.append(item.toString()); // add the item
-					r.append(' ');
+					r.append(" ");
 				}
-				r.append("-1 "); // add the itemset separator
+				r.append(" -1 "); // add the itemset separator
 			}		
 			// add the support
 			r.append("#SUP: ");
@@ -518,10 +518,10 @@ loopSeq:for(PseudoSequence sequence : initialDatabase){
 		r.append(patternCount);
 		r.append('\n');
 		r.append("===================================================\n");
-		// if the result was save into memory, print it
-		if(patterns !=null){
-			patterns.printFrequentPatterns(size, showSequenceIdentifiers);
-		}
+//		 if the result was save into memory, print it  
+//		if(patterns !=null){
+//			patterns.printFrequentPatterns(size, showSequenceIdentifiers);
+//		}
 		System.out.println(r.toString());
 	}
 	

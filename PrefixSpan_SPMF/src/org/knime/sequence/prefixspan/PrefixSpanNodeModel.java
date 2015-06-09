@@ -132,7 +132,9 @@ public class PrefixSpanNodeModel extends NodeModel {
 		//relative in %
 		minSup = m_minSup.getDoubleValue();
 		// absolut minsup
-//		int absminSup =  (int) java.lang.Math.ceil((minSup * rowNum));
+		
+		int absminSup =  (int) java.lang.Math.ceil((minSup * rowNum));
+		
 		outputSequenceIdentifiers = m_output_seq_id.getBooleanValue();
 
 		SequenceDatabase sequenceDatabase = new SequenceDatabase();
@@ -151,10 +153,9 @@ public class PrefixSpanNodeModel extends NodeModel {
 		
 		// execute the algorithm
         SequentialPatterns patterns = algo.runAlgorithm(sequenceDatabase, minSup, null); 
+        
 		algo.printStatistics(sequenceDatabase.size());
-		
-		patterns.printFrequentPatterns(100, outputSequenceIdentifiers);
-		
+		System.out.println("Absolute MIN_SUPP: "+absminSup+ " \t\t #rows: "+rowNum);
 		
 		DataColumnSpec[] allColSpecs = new DataColumnSpec[3];
 		if (outputSequenceIdentifiers) {

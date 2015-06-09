@@ -79,7 +79,7 @@ public class SequentialPatterns {
 				r.append(patternCount);
 				r.append(":  ");
 				r.append(sequence.toString());
-				r.append("support :  ");
+				r.append(" support:  ");
 				r.append(sequence.getRelativeSupportFormated(nbObject));
 				r.append(" (" );
 				r.append(sequence.getAbsoluteSupport());

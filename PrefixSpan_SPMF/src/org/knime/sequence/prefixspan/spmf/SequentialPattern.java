@@ -129,10 +129,11 @@ public class SequentialPattern implements Comparable<SequentialPattern>{
 			for(Integer item : itemset.getItems()){
 				String string = item.toString();
 				r.append(string); // append the item
-				r.append(" -1");
+				r.append(" ");
 			}
-			r.append(" -2");// end of an itemset
+			r.append("-1 ");// end of an itemset
 		}
+		r.append("-2");// end of a sequence
 //
 //		//  add the list of sequence IDs that contains this pattern.
 //		if(getSequencesID() != null){
@@ -142,7 +143,7 @@ public class SequentialPattern implements Comparable<SequentialPattern>{
 //				r.append(' ');
 //			}
 //		}
-		return r.append("    ").toString();
+		return r.toString();
 	}
 	
 	/**
