@@ -121,6 +121,7 @@ public class SequentialPattern implements Comparable<SequentialPattern>{
 	 * Get a string representation of this sequential pattern, 
 	 * containing the sequence IDs of sequence containing this pattern.
 	 */
+	@Override
 	public String toString() {
 		StringBuilder r = new StringBuilder("");
 		// For each itemset in this sequential pattern

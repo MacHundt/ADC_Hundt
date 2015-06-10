@@ -195,6 +195,7 @@ public class PseudoSequence {
 	/**
 	 * Get a string representation of this sequence.
 	 */
+	@Override
 	public String toString() {
 		StringBuilder r = new StringBuilder();
 		// for each itemset

@@ -56,6 +56,7 @@ class Pair{
 	 * Check if two pairs are equal (same item and both appears in a postfix or not).
 	 * @return true if equals.
 	 */
+	@Override
 	public boolean equals(Object object){
 		Pair paire = (Pair) object;
 		if((paire.postfix == this.postfix) 
@@ -68,6 +69,7 @@ class Pair{
 	/**
 	 * Method to calculate an hashcode (because pairs are stored in a map).
 	 */
+	@Override
 	public int hashCode()
 	{// Ex: 127333,P,X,1  127333,N,Z,2
 		// transform it into a string

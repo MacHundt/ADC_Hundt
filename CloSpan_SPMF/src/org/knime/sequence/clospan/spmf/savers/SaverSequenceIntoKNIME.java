@@ -26,7 +26,7 @@ public class SaverSequenceIntoKNIME implements Saver {
 	private BufferedDataContainer container;
 	private ExecutionContext exec;
 	private boolean outputSequenceIdentifiers;
-	private static int rowID = 0;
+	private static int rowID = 1;
 	private int rowNum;
 
 	public SaverSequenceIntoKNIME(ExecutionContext exec,

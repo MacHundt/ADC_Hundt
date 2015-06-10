@@ -151,6 +151,7 @@ public class SequenceDatabase {
 	/**
 	 * Return a string representation of this sequence database.
 	 */
+	@Override
 	public String toString() {
 		StringBuilder r = new StringBuilder();
 		// for each sequence

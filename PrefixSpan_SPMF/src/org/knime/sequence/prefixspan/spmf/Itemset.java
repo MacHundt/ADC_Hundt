@@ -79,6 +79,7 @@ public class Itemset{
 	 * Get this itemset as a string
 	 * @return this itemset as a string
 	 */
+	@Override
 	public String toString(){
 		StringBuilder r = new StringBuilder ();
 		for(Integer item : items){
