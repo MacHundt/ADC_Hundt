@@ -40,7 +40,7 @@ import org.knime.sequence.ruleGrowth.RuleGrowthNodeModel;
  *  RuleGrowth: Mining Sequential Rules Common to Several Sequences by Pattern-Growth. 
  *  Proceedings of the 26th Symposium on Applied Computing (ACM SAC 2011). ACM Press, pp. 954-959. 
  * <br/><br/>
- * The main method of this algorithm is "runAlgorithm". It output the result to a file.
+ * The main method of this algorithm is "runAlgorithm". It output the result to a KNIME DataTable.
  * 
  * @see Occurence
  * @see Sequence
@@ -112,6 +112,7 @@ public class AlgoRULEGROWTH {
 			SequenceDatabase database) throws IOException {
 		
 		this.database = database;
+		this.minConfidence = minConf;
 		// convert minimum support to an absolute minimum support (integer)
 		this.minsuppRelative = (int) Math.ceil(minSup * database.size());
 		
@@ -331,7 +332,6 @@ public class AlgoRULEGROWTH {
 	 */
 	private void saveRule(Set<Integer> tidsIJ, double confIJ, int[] itemsetI, int[] itemsetJ) throws IOException {
 		// increase the number of rule found
-		ruleCount++;
 //		
 //		Arrays.sort(itemsetI);
 //		Arrays.sort(itemsetJ);
@@ -360,7 +360,8 @@ public class AlgoRULEGROWTH {
 		}
 		
 		// add row to the table of the KNIME node
-		RuleGrowthNodeModel.addRowToOutput((ruleCount-1), buffer.toString(), tidsIJ.size(), confIJ);
+		RuleGrowthNodeModel.addRowToOutput((ruleCount), buffer.toString(), tidsIJ.size(), confIJ);
+		ruleCount++;
 		
 		
 //		// write support
@@ -773,7 +774,7 @@ itemLoop:	for(int k=0; k < end.lastItemset; k++){
 	 */
 	public void printStats() {
 		System.out.println("=============  RULEGROWTH - STATS ========");
-		System.out.println("Sequential rules count: " + ruleCount);
+		System.out.println("Sequential rules count: " + (ruleCount-1));
 		System.out.println("Total time: " + (timeEnd - timeStart) + " ms");
 		System.out.println("Max memory: " + MemoryLogger.getInstance().getMaxMemory());
 		System.out.println("==========================================");
