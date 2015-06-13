@@ -134,7 +134,7 @@ public class AlgoRULEGROWTH {
 		// save the minimum confidence parameter
 		this.minConfidence = minConfidence;
 		// reinitialize the number of rules found
-		ruleCount = 0;
+		ruleCount = 1;
 		
 		// if the database was not loaded, then load it.
 		if(database == null){

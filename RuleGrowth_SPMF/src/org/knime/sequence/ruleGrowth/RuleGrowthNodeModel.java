@@ -159,7 +159,7 @@ public class RuleGrowthNodeModel extends NodeModel {
     }
     
     public static void addRowToOutput(int rowID, String rule, double absSupport, double confidence) {
-    	RowKey key = new RowKey("Row " + rowID);
+    	RowKey key = new RowKey("Row" + rowID);
 		DataCell[] cells = new DataCell[3];
 		cells[0] = new StringCell(rule);
 		cells[1] = new DoubleCell(absSupport);
