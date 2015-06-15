@@ -2,6 +2,7 @@ package org.knime.sequence.ruleGrowth;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataColumnSpec;
@@ -77,7 +78,17 @@ public class RuleGrowthNodeModel extends NodeModel {
 		if (inData == null || inData[0] == null) {
 			return inData;
 		}
-
+		
+		ArrayList<String> outt = new ArrayList<String>();
+		outt.add("a");
+		StringBuilder build = new StringBuilder();
+		for ( int i = 0; i< outt.size()-1 ; i++ ) {
+			build.append(outt.get(i));
+			build.append(" -1 ");
+			
+		}
+		build.toString();
+		
 		// stores meta data about the table
 		DataTableSpec inDataSpec = inData[0].getDataTableSpec();
 		rowNum = inData[0].getRowCount();
