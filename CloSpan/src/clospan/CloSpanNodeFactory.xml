@@ -14,7 +14,7 @@
         Note that it is assumed that items within a same itemset are sorted according to a total order and that no item can appear twice in the same itemset. <br />
          The value "-1" indicates the end of an itemset. The value "-2" indicates the end of a sequence (it appears at the end of each String).  <br />
          <br /> For further information see:  <br />
-         http://www.philippe-fournier-viger.com/spmf/index.php?link=documentation.php#exampleBIDE , <br /> http://www.philippe-fournier-viger.com/spmf/icde04_bide.pdf </intro>
+         http://www.philippe-fournier-viger.com/spmf/index.php?link=documentation.php#clospan , <br /> http://www.philippe-fournier-viger.com/spmf/clospan.pdf </intro>
         
         
  		<option name="Minsup">Minimum support (50% = 0.5) </option>
