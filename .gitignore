@@ -44,7 +44,7 @@ local.properties
 .cproject
 
 # JDT-specific (Eclipse Java Development Tools)
-.classpath
+#.classpath
 
 # PDT-specific
 #.buildpath
@@ -54,3 +54,4 @@ local.properties
 
 # TeXlipse plugin
 .texlipse
+/org.knime.config/
