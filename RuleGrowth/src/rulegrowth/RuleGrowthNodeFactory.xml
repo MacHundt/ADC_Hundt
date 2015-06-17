@@ -17,9 +17,9 @@
          http://www.philippe-fournier-viger.com/spmf/index.php?link=documentation.php#rulegrowth , <br /> http://www.philippe-fournier-viger.com/spmf/rulegrowth.pdf </intro>
         
         
- 		<option name="Minsup">Minimum support (50% = 0.5) </option>
         <option name="Sequence column">The column which contains the sequence data (ensure the correct format) </option>
-        <option name="Show Sequence ids">"show sequences ids?" (true/false) This parameter allows to specify that sequence ids of sequences containing a pattern should be output for each pattern found.</option>
+        <option name="minSup">Minimum support (50% = 0.5) </option>
+        <option name="minConf">Minimum confidence  </option>
 
     </fullDescription>
     
