@@ -2,6 +2,7 @@ package prefixspan;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataColumnSpec;
@@ -121,9 +122,11 @@ public class PrefixSpanNodeModel extends NodeModel {
 			return inData;
 		}
 
+		
 		// stores meta data about the table
 		DataTableSpec inDataSpec = inData[0].getDataTableSpec();
 		rowNum = inData[0].getRowCount();
+		
 
 		/*
 		 * read values form Dialog
